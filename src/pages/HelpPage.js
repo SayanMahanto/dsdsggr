@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 
 export default function HelpPage() {
@@ -7,8 +7,12 @@ export default function HelpPage() {
   const [locationUrl, setLocationUrl] = useState("");
   const [message, setMessage] = useState("");
 
+  const recognitionRef = useRef(null);
+
   // Voice Recognition Function
   const startVoiceRecognition = useCallback(() => {
+    if (recognitionRef.current) return; // Prevent multiple instances
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       console.warn("Speech recognition not supported in this browser.");
@@ -39,14 +43,21 @@ export default function HelpPage() {
     };
 
     recognition.start();
+    recognitionRef.current = recognition;
   }, []);
 
   useEffect(() => {
     startVoiceRecognition();
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+        recognitionRef.current = null;
+      }
+    };
   }, [startVoiceRecognition]);
 
   // Function to Handle Help Button Click
-  const handleHelpClick = () => {
+  const handleHelpClick = useCallback(() => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
@@ -60,7 +71,9 @@ export default function HelpPage() {
         startRecording();
 
         if (phoneNumber) {
-          window.location.href = `tel:${phoneNumber}`;
+          setTimeout(() => {
+            window.location.href = `tel:${phoneNumber}`;
+          }, 1000); // Small delay to ensure location updates before calling
         }
       },
       (error) => {
@@ -68,7 +81,7 @@ export default function HelpPage() {
         alert("Could not fetch location. Please enable GPS.");
       }
     );
-  };
+  }, [phoneNumber]);
 
   // Function to Start Audio Recording
   const startRecording = async () => {
