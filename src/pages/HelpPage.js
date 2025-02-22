@@ -9,6 +9,46 @@ export default function HelpPage() {
 
   const recognitionRef = useRef(null);
 
+  // Function to Start Audio Recording
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.start();
+      alert("Microphone access granted! Recording started.");
+    } catch (error) {
+      console.error("Microphone access error:", error);
+      alert("Could not access microphone. Please allow microphone access.");
+    }
+  };
+
+  // Function to Handle Help Button Click
+  const handleHelpClick = useCallback(() => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        setLocationUrl(googleMapsUrl);
+
+        const emergencyMessage = `🚨 EMERGENCY! I need help. My location: ${googleMapsUrl}`;
+        setMessage(emergencyMessage);
+
+        alert("Location fetched! Enter details and send the emergency message.");
+        startRecording();
+
+        if (phoneNumber) {
+          setTimeout(() => {
+            window.location.href = `tel:${phoneNumber}`;
+          }, 1000); // Small delay to ensure location updates before calling
+        }
+      },
+      (error) => {
+        console.error("Error fetching location:", error);
+        alert("Could not fetch location. Please enable GPS.");
+      }
+    );
+  }, [phoneNumber]); // Include phoneNumber in dependencies
+
   // Voice Recognition Function
   const startVoiceRecognition = useCallback(() => {
     if (recognitionRef.current) return; // Prevent multiple instances
@@ -44,7 +84,7 @@ export default function HelpPage() {
 
     recognition.start();
     recognitionRef.current = recognition;
-  }, []);
+  }, [handleHelpClick]); // Add `handleHelpClick` to the dependencies
 
   useEffect(() => {
     startVoiceRecognition();
@@ -55,47 +95,6 @@ export default function HelpPage() {
       }
     };
   }, [startVoiceRecognition]);
-
-  // Function to Handle Help Button Click
-  const handleHelpClick = useCallback(() => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
-        setLocationUrl(googleMapsUrl);
-
-        const emergencyMessage = `🚨 EMERGENCY! I need help. My location: ${googleMapsUrl}`;
-        setMessage(emergencyMessage);
-
-        alert("Location fetched! Enter details and send the emergency message.");
-        startRecording();
-
-        if (phoneNumber) {
-          setTimeout(() => {
-            window.location.href = `tel:${phoneNumber}`;
-          }, 1000); // Small delay to ensure location updates before calling
-        }
-      },
-      (error) => {
-        console.error("Error fetching location:", error);
-        alert("Could not fetch location. Please enable GPS.");
-      }
-    );
-  }, [phoneNumber]);
-
-  // Function to Start Audio Recording
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorder.start();
-
-      alert("Microphone access granted! Recording started.");
-    } catch (error) {
-      console.error("Microphone access error:", error);
-      alert("Could not access microphone. Please allow microphone access.");
-    }
-  };
 
   // Function to Send SMS
   const sendSMS = () => {
