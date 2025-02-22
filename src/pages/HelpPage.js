@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
 export default function HelpPage() {
@@ -6,9 +6,12 @@ export default function HelpPage() {
   const [email, setEmail] = useState("");
   const [locationUrl, setLocationUrl] = useState("");
   const [message, setMessage] = useState("");
-  const [recognition, setRecognition] = useState(null);
 
-  const handleHelpClick = useCallback(() => {
+  useEffect(() => {
+    startVoiceRecognition();
+  }, []);
+
+  const handleHelpClick = () => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
@@ -18,7 +21,9 @@ export default function HelpPage() {
         const emergencyMessage = `EMERGENCY! I need help. My location: ${googleMapsUrl}`;
         setMessage(emergencyMessage);
 
-        alert("Location fetched! Enter details and send the emergency message.");
+        alert(
+          "Location fetched! Enter details and send the emergency message."
+        );
 
         startRecording();
 
@@ -31,21 +36,36 @@ export default function HelpPage() {
         alert("Could not fetch location. Please enable GPS.");
       }
     );
-  }, [phoneNumber]);
+  };
 
-  useEffect(() => {
-    if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
-      console.warn("Speech recognition is not supported in this browser.");
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.start();
+
+      alert("Microphone access granted! Recording started.");
+    } catch (error) {
+      console.error("Microphone access error:", error);
+      alert("Could not access microphone. Please allow microphone access.");
+    }
+  };
+
+  const startVoiceRecognition = () => {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      console.warn("Speech recognition not supported in this browser.");
       return;
     }
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const newRecognition = new SpeechRecognition();
-    newRecognition.continuous = true;
-    newRecognition.lang = "en-US";
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.lang = "en-US";
 
-    newRecognition.onresult = (event) => {
-      const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+    recognition.onresult = (event) => {
+      const transcript =
+        event.results[event.results.length - 1][0].transcript.toLowerCase();
       console.log("Recognized speech:", transcript);
       if (transcript.includes("help")) {
         alert("Help detected! Triggering emergency call.");
@@ -53,34 +73,17 @@ export default function HelpPage() {
       }
     };
 
-    let errorTimeout;
-    newRecognition.onerror = (event) => {
+    recognition.onerror = (event) => {
       console.error("Speech recognition error:", event.error);
-      clearTimeout(errorTimeout);
-      errorTimeout = setTimeout(() => {
+      if (event.error === "no-speech") {
+        console.warn("No speech detected, restarting...");
+        setTimeout(() => recognition.start(), 1000);
+      } else {
         alert("Speech recognition error occurred. Please try again.");
-      }, 10000); // 10-second delay to prevent spam
+      }
     };
 
-    newRecognition.start();
-    setRecognition(newRecognition);
-
-    return () => {
-      newRecognition.stop();
-      clearTimeout(errorTimeout);
-    };
-  }, [handleHelpClick]); // ✅ Added dependency safely
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorder.start();
-      alert("Microphone access granted! Recording started.");
-    } catch (error) {
-      console.error("Microphone access error:", error);
-      alert("Could not access microphone. Please allow microphone access.");
-    }
+    recognition.start();
   };
 
   const sendSMS = () => {
@@ -97,7 +100,9 @@ export default function HelpPage() {
       alert("Please enter a valid email.");
       return;
     }
-    window.location.href = `mailto:${email}?subject=Emergency%20Help&body=${encodeURIComponent(message)}`;
+    window.location.href = `mailto:${email}?subject=Emergency%20Help&body=${encodeURIComponent(
+      message
+    )}`;
   };
 
   const copyMessageToClipboard = () => {
@@ -107,38 +112,36 @@ export default function HelpPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Top Navbar */}
       <nav className="bg-red-600 text-white flex justify-between items-center p-4">
         <div className="flex items-center space-x-4">
           <button className="text-xl font-bold">&#9776;</button>
           <h1 className="font-bold text-xl">SHEcurity</h1>
         </div>
         <div className="flex items-center space-x-4">
-          <span className="text-sm">Wi-Fi <span className="font-bold">ON</span></span>
-          <span className="text-sm">GPS <span className="font-bold">ON</span></span>
+          <span className="text-sm">
+            Wi-Fi <span className="font-bold">ON</span>
+          </span>
+          <span className="text-sm">
+            GPS <span className="font-bold">ON</span>
+          </span>
         </div>
       </nav>
 
-      {/* Main Content */}
       <div className="flex flex-col items-center justify-center flex-grow bg-white">
-        {/* HELP Button */}
         <button
           onClick={handleHelpClick}
           className="bg-red-600 text-white text-2xl font-bold rounded-full w-40 h-40 flex items-center justify-center shadow-lg mb-8"
-          aria-label="Trigger emergency help"
         >
           HELP
         </button>
 
-        {/* Start Voice Recognition Manually */}
         <button
-          onClick={() => recognition && recognition.start()}
+          onClick={startVoiceRecognition}
           className="bg-blue-600 text-white p-2 rounded-lg mb-4"
         >
           Start Voice Recognition
         </button>
 
-        {/* User Inputs for Phone Number & Email */}
         <div className="w-80 flex flex-col items-center">
           <input
             type="tel"
@@ -156,7 +159,6 @@ export default function HelpPage() {
           />
         </div>
 
-        {/* Show Buttons when location & phone/email are available */}
         {locationUrl && (
           <div className="flex flex-col items-center mt-4">
             <button
@@ -187,10 +189,13 @@ export default function HelpPage() {
         )}
       </div>
 
-      {/* Footer Navigation */}
       <footer className="flex justify-center items-center p-2 bg-gray-100">
-        <Link to="/login" className="mx-4 text-blue-600">Login</Link>
-        <Link to="/signup" className="mx-4 text-blue-600">Signup</Link>
+        <Link to="/login" className="mx-4 text-blue-600">
+          Login
+        </Link>
+        <Link to="/signup" className="mx-4 text-blue-600">
+          Signup
+        </Link>
       </footer>
     </div>
   );
