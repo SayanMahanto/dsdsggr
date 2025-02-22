@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 
 export default function HelpPage() {
@@ -8,19 +8,68 @@ export default function HelpPage() {
   const [message, setMessage] = useState("");
   const [recognition, setRecognition] = useState(null);
 
+  // Function to start voice recording
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.start();
+
+      alert("Microphone access granted! Recording started.");
+    } catch (error) {
+      console.error("Microphone access error:", error);
+      alert("Could not access microphone. Please allow microphone access.");
+    }
+  }, []);
+
+  // Function to handle emergency help
+  const handleHelpClick = useCallback(() => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        setLocationUrl(googleMapsUrl);
+
+        const emergencyMessage = `EMERGENCY! I need help. My location: ${googleMapsUrl}`;
+        setMessage(emergencyMessage);
+
+        alert(
+          "Location fetched! Enter details and send the emergency message."
+        );
+
+        // Automatically start recording
+        startRecording();
+
+        // Automatically call the given number
+        if (phoneNumber) {
+          window.location.href = `tel:${phoneNumber}`;
+        }
+      },
+      (error) => {
+        console.error("Error fetching location:", error);
+        alert("Could not fetch location. Please enable GPS.");
+      }
+    );
+  }, [phoneNumber, startRecording]); // ✅ Dependencies inside `useCallback`
+
+  // Speech Recognition Setup
   useEffect(() => {
-    if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
+    if (
+      !("webkitSpeechRecognition" in window || "SpeechRecognition" in window)
+    ) {
       console.warn("Speech recognition is not supported in this browser.");
       return;
     }
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
     const newRecognition = new SpeechRecognition();
     newRecognition.continuous = true;
     newRecognition.lang = "en-US";
 
     newRecognition.onresult = (event) => {
-      const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+      const transcript =
+        event.results[event.results.length - 1][0].transcript.toLowerCase();
       console.log("Recognized speech:", transcript);
       if (transcript.includes("help")) {
         alert("Help detected! Triggering emergency call.");
@@ -39,48 +88,9 @@ export default function HelpPage() {
     return () => {
       newRecognition.stop(); // Cleanup when component unmounts
     };
-  }, []);
+  }, [handleHelpClick]); // ✅ Now `handleHelpClick` is included in dependencies
 
-  const handleHelpClick = () => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
-        setLocationUrl(googleMapsUrl);
-
-        const emergencyMessage = `EMERGENCY! I need help. My location: ${googleMapsUrl}`;
-        setMessage(emergencyMessage);
-
-        alert("Location fetched! Enter details and send the emergency message.");
-
-        // Automatically start recording
-        startRecording();
-
-        // Automatically call the given number
-        if (phoneNumber) {
-          window.location.href = `tel:${phoneNumber}`;
-        }
-      },
-      (error) => {
-        console.error("Error fetching location:", error);
-        alert("Could not fetch location. Please enable GPS.");
-      }
-    );
-  };
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorder.start();
-
-      alert("Microphone access granted! Recording started.");
-    } catch (error) {
-      console.error("Microphone access error:", error);
-      alert("Could not access microphone. Please allow microphone access.");
-    }
-  };
-
+  // Function to send SMS
   const sendSMS = () => {
     if (!phoneNumber) {
       alert("Please enter a valid phone number.");
@@ -90,14 +100,18 @@ export default function HelpPage() {
     window.location.href = smsUrl;
   };
 
+  // Function to send Email
   const sendEmail = () => {
     if (!email) {
       alert("Please enter a valid email.");
       return;
     }
-    window.location.href = `mailto:${email}?subject=Emergency%20Help&body=${encodeURIComponent(message)}`;
+    window.location.href = `mailto:${email}?subject=Emergency%20Help&body=${encodeURIComponent(
+      message
+    )}`;
   };
 
+  // Function to copy the emergency message
   const copyMessageToClipboard = () => {
     navigator.clipboard.writeText(message);
     alert("Message copied! Paste it into your SMS app.");
@@ -112,8 +126,12 @@ export default function HelpPage() {
           <h1 className="font-bold text-xl">SHEcurity</h1>
         </div>
         <div className="flex items-center space-x-4">
-          <span className="text-sm">Wi-Fi <span className="font-bold">ON</span></span>
-          <span className="text-sm">GPS <span className="font-bold">ON</span></span>
+          <span className="text-sm">
+            Wi-Fi <span className="font-bold">ON</span>
+          </span>
+          <span className="text-sm">
+            GPS <span className="font-bold">ON</span>
+          </span>
         </div>
       </nav>
 
@@ -154,7 +172,7 @@ export default function HelpPage() {
           />
         </div>
 
-        {/* Show Buttons when location & phone/email are available */}
+        {/* Emergency Actions */}
         {locationUrl && (
           <div className="flex flex-col items-center mt-4">
             <button
@@ -187,8 +205,12 @@ export default function HelpPage() {
 
       {/* Footer Navigation */}
       <footer className="flex justify-center items-center p-2 bg-gray-100">
-        <Link to="/login" className="mx-4 text-blue-600">Login</Link>
-        <Link to="/signup" className="mx-4 text-blue-600">Signup</Link>
+        <Link to="/login" className="mx-4 text-blue-600">
+          Login
+        </Link>
+        <Link to="/signup" className="mx-4 text-blue-600">
+          Signup
+        </Link>
       </footer>
     </div>
   );
