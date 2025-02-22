@@ -7,6 +7,7 @@ export default function HelpPage() {
   const [locationUrl, setLocationUrl] = useState("");
   const [message, setMessage] = useState("");
 
+  // Voice Recognition Function
   const startVoiceRecognition = useCallback(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -44,6 +45,7 @@ export default function HelpPage() {
     startVoiceRecognition();
   }, [startVoiceRecognition]);
 
+  // Function to Handle Help Button Click
   const handleHelpClick = () => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -51,11 +53,10 @@ export default function HelpPage() {
         const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
         setLocationUrl(googleMapsUrl);
 
-        const emergencyMessage = `EMERGENCY! I need help. My location: ${googleMapsUrl}`;
+        const emergencyMessage = `🚨 EMERGENCY! I need help. My location: ${googleMapsUrl}`;
         setMessage(emergencyMessage);
 
         alert("Location fetched! Enter details and send the emergency message.");
-
         startRecording();
 
         if (phoneNumber) {
@@ -69,6 +70,7 @@ export default function HelpPage() {
     );
   };
 
+  // Function to Start Audio Recording
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -82,6 +84,7 @@ export default function HelpPage() {
     }
   };
 
+  // Function to Send SMS
   const sendSMS = () => {
     if (!phoneNumber) {
       alert("Please enter a valid phone number.");
@@ -91,6 +94,7 @@ export default function HelpPage() {
     window.location.href = smsUrl;
   };
 
+  // Function to Send Email
   const sendEmail = () => {
     if (!email) {
       alert("Please enter a valid email.");
@@ -99,6 +103,7 @@ export default function HelpPage() {
     window.location.href = `mailto:${email}?subject=Emergency%20Help&body=${encodeURIComponent(message)}`;
   };
 
+  // Function to Copy Emergency Message
   const copyMessageToClipboard = () => {
     navigator.clipboard.writeText(message);
     alert("Message copied! Paste it into your SMS app.");
@@ -106,6 +111,7 @@ export default function HelpPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Navbar */}
       <nav className="bg-red-600 text-white flex justify-between items-center p-4">
         <div className="flex items-center space-x-4">
           <button className="text-xl font-bold">&#9776;</button>
@@ -117,7 +123,9 @@ export default function HelpPage() {
         </div>
       </nav>
 
+      {/* Main Content */}
       <div className="flex flex-col items-center justify-center flex-grow bg-white">
+        {/* Help Button */}
         <button
           onClick={handleHelpClick}
           className="bg-red-600 text-white text-2xl font-bold rounded-full w-40 h-40 flex items-center justify-center shadow-lg mb-8"
@@ -125,6 +133,7 @@ export default function HelpPage() {
           HELP
         </button>
 
+        {/* Start Voice Recognition Button */}
         <button
           onClick={startVoiceRecognition}
           className="bg-blue-600 text-white p-2 rounded-lg mb-4"
@@ -132,6 +141,7 @@ export default function HelpPage() {
           Start Voice Recognition
         </button>
 
+        {/* Input Fields */}
         <div className="w-80 flex flex-col items-center">
           <input
             type="tel"
@@ -149,6 +159,7 @@ export default function HelpPage() {
           />
         </div>
 
+        {/* Action Buttons */}
         {locationUrl && (
           <div className="flex flex-col items-center mt-4">
             <button className="bg-green-600 text-white p-2 rounded-lg mb-2 w-64 text-center" onClick={sendSMS}>
@@ -167,6 +178,7 @@ export default function HelpPage() {
         )}
       </div>
 
+      {/* Footer */}
       <footer className="flex justify-center items-center p-2 bg-gray-100">
         <Link to="/login" className="mx-4 text-blue-600">Login</Link>
         <Link to="/signup" className="mx-4 text-blue-600">Signup</Link>
