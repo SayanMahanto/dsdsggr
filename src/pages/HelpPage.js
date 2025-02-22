@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 
 export default function HelpPage() {
@@ -7,9 +7,42 @@ export default function HelpPage() {
   const [locationUrl, setLocationUrl] = useState("");
   const [message, setMessage] = useState("");
 
+  const startVoiceRecognition = useCallback(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      console.warn("Speech recognition not supported in this browser.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.lang = "en-US";
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+      console.log("Recognized speech:", transcript);
+      if (transcript.includes("help")) {
+        alert("Help detected! Triggering emergency call.");
+        handleHelpClick();
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error:", event.error);
+      if (event.error === "no-speech") {
+        console.warn("No speech detected, restarting...");
+        setTimeout(() => recognition.start(), 1000);
+      } else {
+        alert("Speech recognition error occurred. Please try again.");
+      }
+    };
+
+    recognition.start();
+  }, []);
+
   useEffect(() => {
     startVoiceRecognition();
-  }, []);
+  }, [startVoiceRecognition]);
 
   const handleHelpClick = () => {
     navigator.geolocation.getCurrentPosition(
@@ -21,9 +54,7 @@ export default function HelpPage() {
         const emergencyMessage = `EMERGENCY! I need help. My location: ${googleMapsUrl}`;
         setMessage(emergencyMessage);
 
-        alert(
-          "Location fetched! Enter details and send the emergency message."
-        );
+        alert("Location fetched! Enter details and send the emergency message.");
 
         startRecording();
 
@@ -51,41 +82,6 @@ export default function HelpPage() {
     }
   };
 
-  const startVoiceRecognition = () => {
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      console.warn("Speech recognition not supported in this browser.");
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.lang = "en-US";
-
-    recognition.onresult = (event) => {
-      const transcript =
-        event.results[event.results.length - 1][0].transcript.toLowerCase();
-      console.log("Recognized speech:", transcript);
-      if (transcript.includes("help")) {
-        alert("Help detected! Triggering emergency call.");
-        handleHelpClick();
-      }
-    };
-
-    recognition.onerror = (event) => {
-      console.error("Speech recognition error:", event.error);
-      if (event.error === "no-speech") {
-        console.warn("No speech detected, restarting...");
-        setTimeout(() => recognition.start(), 1000);
-      } else {
-        alert("Speech recognition error occurred. Please try again.");
-      }
-    };
-
-    recognition.start();
-  };
-
   const sendSMS = () => {
     if (!phoneNumber) {
       alert("Please enter a valid phone number.");
@@ -100,9 +96,7 @@ export default function HelpPage() {
       alert("Please enter a valid email.");
       return;
     }
-    window.location.href = `mailto:${email}?subject=Emergency%20Help&body=${encodeURIComponent(
-      message
-    )}`;
+    window.location.href = `mailto:${email}?subject=Emergency%20Help&body=${encodeURIComponent(message)}`;
   };
 
   const copyMessageToClipboard = () => {
@@ -118,12 +112,8 @@ export default function HelpPage() {
           <h1 className="font-bold text-xl">SHEcurity</h1>
         </div>
         <div className="flex items-center space-x-4">
-          <span className="text-sm">
-            Wi-Fi <span className="font-bold">ON</span>
-          </span>
-          <span className="text-sm">
-            GPS <span className="font-bold">ON</span>
-          </span>
+          <span className="text-sm">Wi-Fi <span className="font-bold">ON</span></span>
+          <span className="text-sm">GPS <span className="font-bold">ON</span></span>
         </div>
       </nav>
 
@@ -161,28 +151,16 @@ export default function HelpPage() {
 
         {locationUrl && (
           <div className="flex flex-col items-center mt-4">
-            <button
-              className="bg-green-600 text-white p-2 rounded-lg mb-2 w-64 text-center"
-              onClick={sendSMS}
-            >
+            <button className="bg-green-600 text-white p-2 rounded-lg mb-2 w-64 text-center" onClick={sendSMS}>
               Send SMS
             </button>
-            <button
-              className="bg-blue-600 text-white p-2 rounded-lg mb-2 w-64 text-center"
-              onClick={sendEmail}
-            >
+            <button className="bg-blue-600 text-white p-2 rounded-lg mb-2 w-64 text-center" onClick={sendEmail}>
               Send Email
             </button>
-            <button
-              className="bg-gray-600 text-white p-2 rounded-lg mb-2 w-64 text-center"
-              onClick={copyMessageToClipboard}
-            >
+            <button className="bg-gray-600 text-white p-2 rounded-lg mb-2 w-64 text-center" onClick={copyMessageToClipboard}>
               Copy Message
             </button>
-            <a
-              className="bg-red-500 text-white p-2 rounded-lg w-64 text-center"
-              href={`tel:${phoneNumber}`}
-            >
+            <a className="bg-red-500 text-white p-2 rounded-lg w-64 text-center" href={`tel:${phoneNumber}`}>
               Call Now
             </a>
           </div>
@@ -190,12 +168,8 @@ export default function HelpPage() {
       </div>
 
       <footer className="flex justify-center items-center p-2 bg-gray-100">
-        <Link to="/login" className="mx-4 text-blue-600">
-          Login
-        </Link>
-        <Link to="/signup" className="mx-4 text-blue-600">
-          Signup
-        </Link>
+        <Link to="/login" className="mx-4 text-blue-600">Login</Link>
+        <Link to="/signup" className="mx-4 text-blue-600">Signup</Link>
       </footer>
     </div>
   );
