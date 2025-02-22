@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 
 export default function HelpPage() {
@@ -7,6 +7,31 @@ export default function HelpPage() {
   const [locationUrl, setLocationUrl] = useState("");
   const [message, setMessage] = useState("");
   const [recognition, setRecognition] = useState(null);
+
+  const handleHelpClick = useCallback(() => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        setLocationUrl(googleMapsUrl);
+
+        const emergencyMessage = `EMERGENCY! I need help. My location: ${googleMapsUrl}`;
+        setMessage(emergencyMessage);
+
+        alert("Location fetched! Enter details and send the emergency message.");
+
+        startRecording();
+
+        if (phoneNumber) {
+          window.location.href = `tel:${phoneNumber}`;
+        }
+      },
+      (error) => {
+        console.error("Error fetching location:", error);
+        alert("Could not fetch location. Please enable GPS.");
+      }
+    );
+  }, [phoneNumber]);
 
   useEffect(() => {
     if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
@@ -34,7 +59,7 @@ export default function HelpPage() {
       clearTimeout(errorTimeout);
       errorTimeout = setTimeout(() => {
         alert("Speech recognition error occurred. Please try again.");
-      }, 3000);
+      }, 10000); // 10-second delay to prevent spam
     };
 
     newRecognition.start();
@@ -42,34 +67,9 @@ export default function HelpPage() {
 
     return () => {
       newRecognition.stop();
-      clearTimeout(errorTimeout); // Cleanup timeout on unmount
+      clearTimeout(errorTimeout);
     };
-  }, []);
-
-  const handleHelpClick = () => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
-        setLocationUrl(googleMapsUrl);
-
-        const emergencyMessage = `EMERGENCY! I need help. My location: ${googleMapsUrl}`;
-        setMessage(emergencyMessage);
-
-        alert("Location fetched! Enter details and send the emergency message.");
-
-        startRecording();
-
-        if (phoneNumber) {
-          window.location.href = `tel:${phoneNumber}`;
-        }
-      },
-      (error) => {
-        console.error("Error fetching location:", error);
-        alert("Could not fetch location. Please enable GPS.");
-      }
-    );
-  };
+  }, [handleHelpClick]); // ✅ Added dependency safely
 
   const startRecording = async () => {
     try {
