@@ -8,6 +8,11 @@ export default function HelpPage() {
   const [message, setMessage] = useState("");
 
   const recognitionRef = useRef(null);
+  const phoneNumberRef = useRef(""); // Stores latest phone number
+
+  useEffect(() => {
+    phoneNumberRef.current = phoneNumber;
+  }, [phoneNumber]);
 
   // Function to Start Audio Recording
   const startRecording = async () => {
@@ -36,10 +41,10 @@ export default function HelpPage() {
         alert("Location fetched! Enter details and send the emergency message.");
         startRecording();
 
-        if (phoneNumber) {
+        if (phoneNumberRef.current) {
           setTimeout(() => {
-            window.location.href = `tel:${phoneNumber}`;
-          }, 1000); // Small delay to ensure location updates before calling
+            window.location.href = `tel:${phoneNumberRef.current}`;
+          }, 1000);
         }
       },
       (error) => {
@@ -47,7 +52,7 @@ export default function HelpPage() {
         alert("Could not fetch location. Please enable GPS.");
       }
     );
-  }, [phoneNumber]); // Include phoneNumber in dependencies
+  }, []); // No dependencies
 
   // Voice Recognition Function
   const startVoiceRecognition = useCallback(() => {
@@ -55,7 +60,7 @@ export default function HelpPage() {
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      console.warn("Speech recognition not supported in this browser.");
+      console.warn("Speech recognition not supported.");
       return;
     }
 
@@ -76,7 +81,7 @@ export default function HelpPage() {
       console.error("Speech recognition error:", event.error);
       if (event.error === "no-speech") {
         console.warn("No speech detected, restarting...");
-        setTimeout(() => recognition.start(), 1000);
+        setTimeout(() => recognition.start(), 10000);
       } else {
         alert("Speech recognition error occurred. Please try again.");
       }
@@ -84,7 +89,7 @@ export default function HelpPage() {
 
     recognition.start();
     recognitionRef.current = recognition;
-  }, [handleHelpClick]); // Add `handleHelpClick` to the dependencies
+  }, [handleHelpClick]);
 
   useEffect(() => {
     startVoiceRecognition();
